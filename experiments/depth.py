@@ -87,6 +87,7 @@ def load_config_from_url(url: str) -> str:
 
 
 BACKBONE_SIZE = "small"  # in ("small", "base", "large" or "giant")
+print("Selected backbone size:", BACKBONE_SIZE)
 
 
 backbone_archs = {
@@ -96,21 +97,32 @@ backbone_archs = {
     "giant": "vitg14",
 }
 backbone_arch = backbone_archs[BACKBONE_SIZE]
+print("Backbone architecture:", backbone_arch)
 backbone_name = f"dinov2_{backbone_arch}"
+print("Backbone name:", backbone_name)
 
 backbone_model = torch.hub.load(repo_or_dir="facebookresearch/dinov2", model=backbone_name)
+print("Backbone model loaded.")
 backbone_model.eval()
+print("Backbone model set to eval mode.")
 backbone_model.cuda()
+print("Backbone model moved to CUDA.")
 
 HEAD_DATASET = "nyu"  # in ("nyu", "kitti")
+print("Selected head dataset:", HEAD_DATASET)
 HEAD_TYPE = "dpt"  # in ("linear", "linear4", "dpt")
+print("Selected head type:", HEAD_TYPE)
 
 DINOV2_BASE_URL = "https://dl.fbaipublicfiles.com/dinov2"
 head_config_url = f"{DINOV2_BASE_URL}/{backbone_name}/{backbone_name}_{HEAD_DATASET}_{HEAD_TYPE}_config.py"
+print("Head config URL:", head_config_url)
 head_checkpoint_url = f"{DINOV2_BASE_URL}/{backbone_name}/{backbone_name}_{HEAD_DATASET}_{HEAD_TYPE}_head.pth"
+print("Head checkpoint URL:", head_checkpoint_url)
 
 cfg_str = load_config_from_url(head_config_url)
+print("Configuration string loaded.")
 cfg = mmcv.Config.fromstring(cfg_str, file_format=".py")
+print("Configuration parsed.")
 
 model = create_depther(
     cfg,
@@ -118,25 +130,39 @@ model = create_depther(
     backbone_size=BACKBONE_SIZE,
     head_type=HEAD_TYPE,
 )
+print("Depther model created.")
 
 load_checkpoint(model, head_checkpoint_url, map_location="cpu")
+print("Checkpoint loaded into model.")
 model.eval()
+print("Model set to eval mode.")
 model.cuda()
+print("Model moved to CUDA.")
 
 EXAMPLE_IMAGE_URL = "https://dl.fbaipublicfiles.com/dinov2/images/example.jpg"
+print("Example image URL:", EXAMPLE_IMAGE_URL)
 
 
 image = load_image_from_url(EXAMPLE_IMAGE_URL)
+print("Image loaded from URL.")
 
 transform = make_depth_transform()
+print("Depth transform created.")
 
 scale_factor = 1
+print("Scale factor:", scale_factor)
 rescaled_image = image.resize((scale_factor * image.width, scale_factor * image.height))
+print("Image rescaled.")
 transformed_image = transform(rescaled_image)
+print("Image transformed.")
 batch = transformed_image.unsqueeze(0).cuda()  # Make a batch of one image
+print("Batch created and moved to CUDA.")
 
 with torch.inference_mode():
     result = model.whole_inference(batch, img_meta=None, rescale=True)
+    print("Inference completed.")
 
 depth_image = render_depth(result.squeeze().cpu())
+print("Depth image rendered.")
 depth_image.save("depth_output.png")
+print("Depth image saved to 'depth_output.png'.")
